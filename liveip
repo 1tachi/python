@@ -1,0 +1,89 @@
+#-*- coding: UTF-8 -*-
+
+import requests
+
+import threading
+
+import Queue
+
+import sys
+
+import ipaddr
+
+
+
+class PortScan(threading.Thread):
+
+    def __init__(self,queue):
+
+        threading.Thread.__init__(self)
+
+        self._queue = queue
+
+        self.headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36',}
+
+    def run(self):
+
+        while True:
+
+            if self._queue.empty():
+
+                break
+
+            try:
+
+                ip = str(self._queue.get(timeout=5))
+
+                url = 'http://' + ip
+
+                r = requests.get(url=url,headers=self.headers,timeout=5)
+
+                status = r.status_code
+
+                if status:
+
+                    sys.stdout.write("%-27s\n" % (url))
+
+            except Exception:
+
+                pass
+
+def main():
+
+    if len(sys.argv) != 2:
+
+        print 'Usage: python %s 192.168.1.1/24'%(sys.argv[0]) 
+
+    else:
+
+        threads = []
+
+        threadnum = 250        #线程数
+
+        queue = Queue.Queue()
+
+        cidrip = sys.argv[1]      #接收输入IP段
+
+        ips = ipaddr.IPNetwork(cidrip)
+
+        for ip in ips:
+
+            queue.put(ip)
+
+        for i in xrange(threadnum):
+
+            threads.append(PortScan(queue))
+
+        for t in threads:
+
+            t.start()
+
+        for t in threads:
+
+            t.join()
+
+        print 'ALL Finished!'
+
+if __name__ == '__main__':
+
+    main()
